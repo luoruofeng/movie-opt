@@ -2,6 +2,10 @@ import os
 import chardet  # 用于自动检测文件编码
 import subprocess
 import chardet  # 用于自动检测文件编码
+import re
+import json
+from PIL import Image, ImageDraw, ImageFont
+
 
 # 全局变量，定义 ASS 文件的样式
 ASS_STYLE = """
@@ -14,8 +18,8 @@ PlayDepth: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Chinese,SimSun,24,&H00FFFFFF,&H0000FFFF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,1,0,2,10,10,10,1
-Style: English,Arial,20,&H00FFFF00,&H0000FFFF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,1,0,2,10,10,10,1
+Style: Chinese,SimSun,10,&H00FFFFFF,&H0000FFFF,&H00000000,&H99808080,0,0,0,0,100,100,0,0,3,1,0,7,10,10,10,1
+Style: English,Arial,16,&H00FFFF00,&H0000FFFF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,1,0,7,10,10,10,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -34,7 +38,7 @@ def split_text(text):
     english = " ".join(re.findall(r"[a-zA-Z0-9,.'!? ]+", text))
     return chinese.strip(), english.strip()
 
-def convert_srt_to_ass(srt_file, ass_file):
+def subtitle_srt_to_ass(srt_file, ass_file):
     """将 SRT 文件转换为 ASS 文件"""
     # 自动检测编码
     encoding = detect_encoding(srt_file)
@@ -74,14 +78,18 @@ def process_buffer(buffer, ass):
     time_line = buffer[0]
     text = " ".join(buffer[1:]).replace("\n", " ")  # 合并多行字幕内容为一行
     start, end = time_line.split(" --> ")
-    start = start.strip().replace(",", ".")
-    end = end.strip().replace(",", ".")
+    start = format_time(start.strip().replace(",", "."))
+    end = format_time(end.strip().replace(",", "."))
     
     chinese, english = split_text(text)
     if chinese:
         ass.write(f"Dialogue: 0,{start},{end},Chinese,,0,0,0,,{chinese}\n")
     if english:
         ass.write(f"Dialogue: 0,{start},{end},English,,0,0,0,,{english}\n")
+
+def format_time(time_str):
+    """格式化时间字符串，确保小数点后只保留两位"""
+    return re.sub(r"(\.\d{2})\d*", r"\1", time_str)
 
 def srt2ass(args):
     print(f"SRT 文件夹路径: {args.path}")
@@ -101,7 +109,7 @@ def srt2ass(args):
             ass_file = os.path.splitext(srt_file)[0] + ".ass"
 
             print(f"转换文件: {srt_file} -> {ass_file}")
-            convert_srt_to_ass(srt_file, ass_file)
+            subtitle_srt_to_ass(srt_file, ass_file)
 
     print("转换完成！")
 
@@ -129,7 +137,10 @@ def addass(args):
     for video_name, video_path in video_files.items():
         if video_name in ass_files:
             ass_path = ass_files[video_name]
-            output_path = os.path.join(path, f"{video_name}_subtitled.mkv")
+            
+            # 获取原视频文件的扩展名
+            video_extension = os.path.splitext(video_path)[1]
+            output_path = os.path.join(path, f"{video_name}_subtitled{video_extension}")
 
             # 将路径标准化为相对路径
             relative_ass_path = os.path.relpath(ass_path, start=path)
@@ -248,3 +259,173 @@ def mergesrt(args):
                 print(f"合并并删除: {file1} 和 {file2} -> {merged_file_name}")
                 break
     print("合并完成！")
+
+
+
+def sequencesrt(args):
+    print(f"SRT 文件夹路径: {args.path}")
+
+    # 如果路径为空，则使用当前目录
+    path = args.path if args.path else os.getcwd()
+
+    # 检查路径是否存在
+    if not os.path.exists(path):
+        print(f"路径不存在: {path}")
+        return
+
+    # 获取所有 SRT 文件
+    srt_files = [f for f in os.listdir(path) if f.endswith(".srt")]
+
+    for file in srt_files:
+        srt_path = os.path.join(path, file)
+        new_srt_lines = []
+        single_line_only = True
+
+        with open(srt_path, "r", encoding="utf-8") as srt_file:
+            content = srt_file.readlines()
+
+        # 解析 SRT 内容
+        subtitles = []
+        temp_block = []
+        for line in content:
+            line = line.strip()
+            if line:
+                temp_block.append(line)
+            else:
+                if temp_block:
+                    subtitles.append(temp_block)
+                temp_block = []
+
+        if temp_block:
+            subtitles.append(temp_block)
+
+        # 检查和修改字幕
+        for i in range(len(subtitles)):
+            block = subtitles[i]
+            if len(block) < 3:
+                continue  # 略过不完整的块
+
+            subtitle_lines = block[2:]  # 实际字幕行
+            if len(subtitle_lines) > 1:
+                single_line_only = False
+                # 如果显示两行字幕，将其合并并调整时间
+                start_time, end_time = block[1].split(" --> ")
+                if i + 1 < len(subtitles):
+                    next_start_time = subtitles[i + 1][1].split(" --> ")[0]
+                    block[1] = f"{start_time} --> {next_start_time}"
+
+                # 合并所有字幕行
+                combined_text = " ".join(subtitle_lines)
+                new_srt_lines.append(block[:2] + [combined_text])
+            else:
+                new_srt_lines.append(block)
+
+        # 如果所有字幕都只有一行，则跳过处理
+        if single_line_only:
+            print(f"文件 {file} 已符合条件，无需处理。")
+            continue
+
+        # 保存修改后的字幕到新文件，并删除原始文件
+        new_srt_path = os.path.join(path, f"modified_{file}")
+        with open(new_srt_path, "w", encoding="utf-8") as new_srt_file:
+            for block in new_srt_lines:
+                new_srt_file.write("\n".join(block) + "\n\n")
+
+        os.remove(srt_path)
+        print(f"已处理文件: {file}, 新文件保存为: modified_{file}")
+
+
+colors_ex = {"tell": "red", "about": "blue"}
+def srt2txtpng(args):
+    print(f"SRT 文件夹路径: {args.path}")
+
+    # 如果路径为空，则使用当前目录
+    path = args.path if args.path else os.getcwd()
+
+    # 检查路径是否存在
+    if not os.path.exists(path):
+        print(f"路径不存在: {path}")
+        return
+
+    # 遍历目录中的所有 SRT 文件
+    for file_name in os.listdir(path):
+        if file_name.endswith(".srt"):
+            file_path = os.path.join(path, file_name)
+            
+            # 提取 SRT 文件中的字幕内容
+            with open(file_path, 'r', encoding='utf-8') as srt_file:
+                content = srt_file.read()
+            
+            # 去掉编号、时间和空行，只保留字幕内容
+            lines = content.splitlines()
+            txt = []
+            for line in lines:
+                # 匹配时间格式：00:00:00,000 --> 00:00:00,000 或者编号
+                if re.match(r'^\d+$', line) or re.match(r'\d{2}:\d{2}:\d{2},\d{3}', line) or line.strip() == '':
+                    continue
+                txt.append(line.strip())
+            txt = "\n".join(txt)
+            
+            # 生成 PNG 保存路径
+            output_png_path = os.path.join(path, os.path.splitext(file_name)[0] + ".png")
+            
+            # 创建 PNG
+            create_png_with_text(txt, output_png_path)
+            print(f"处理完成：{output_png_path}")
+
+def create_png_with_text(text, output_path):
+    # 图片的宽度（固定）
+    image_width = 1284
+    
+    # 设置字体和大小
+    font_path = "C:\\Users\\luoruofeng\\AppData\\Local\\Microsoft\\Windows\\Fonts\\AlibabaPuHuiTi-3-75-SemiBold.ttf"  # 根据系统字体路径修改
+    font_size = 44
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+    except OSError:
+        print("找不到字体文件，请修改路径或安装字体。")
+        return
+
+    # 创建一个临时画布
+    dummy_image = Image.new('RGB', (image_width, 1), "white")
+    draw = ImageDraw.Draw(dummy_image)
+
+    # 自动换行处理文本
+    margin = 10
+    line_spacing = 4  # 行间距
+    wrapped_text = wrap_text(text, draw, font, image_width - 2 * margin)
+
+    # 计算文字总高度
+    bbox = draw.multiline_textbbox((0, 0), wrapped_text, font=font, spacing=line_spacing)
+    text_height = bbox[3] - bbox[1]
+    image_height = text_height + 2 * margin
+
+    # 创建实际的图片
+    image = Image.new('RGB', (image_width, image_height), "white")
+    draw = ImageDraw.Draw(image)
+
+    # 绘制文本
+    draw.multiline_text((margin, margin), wrapped_text, fill="black", font=font, spacing=line_spacing)
+
+    # 保存图片
+    image.save(output_path, "PNG")
+    print(f"PNG 图片已保存: {output_path}")
+
+def wrap_text(text, draw, font, max_width):
+    """根据最大宽度自动换行文本"""
+    lines = []
+    for paragraph in text.split("\n"):
+        current_line = ""
+        for word in paragraph.split():
+            # 测试当前行加上新单词后的宽度
+            test_line = f"{current_line} {word}".strip()
+            bbox = draw.textbbox((0, 0), test_line, font=font)
+            width = bbox[2] - bbox[0]  # 宽度计算
+            if width <= max_width:
+                current_line = test_line
+            else:
+                lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+    return "\n".join(lines)

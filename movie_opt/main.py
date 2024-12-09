@@ -1,6 +1,6 @@
 import argparse
 from movie_opt.commands.create import create_pc, create_phone
-from movie_opt.commands.subtitle import srt2ass, addass, mergesrt
+from movie_opt.commands.subtitle import srt2ass, addass, mergesrt, sequencesrt, srt2txtpng
 from movie_opt.commands.picture import cut_pc2phone, scale_pc2phone, add_text
 
 def main():
@@ -23,26 +23,37 @@ def main():
     subparser_create_phone.add_argument("--path", required=False, help="包括了字幕和视频的文件夹的路径")
     subparser_create_phone.set_defaults(func=create_phone)
 
-    #Command convert
-    parser_convert = subparsers.add_parser("convert", help="格式转换")
-    subparser_convert = parser_convert.add_subparsers(dest="subcommand", help="convert命令的子命令")
+    #Command subtitle
+    parser_subtitle = subparsers.add_parser("subtitle", help="格式转换")
+    subparser_subtitle = parser_subtitle.add_subparsers(dest="subcommand", help="subtitle命令的子命令")
     
-    # Command convert -> Subcommand srt2ass
-    subparser_convert_srt2ass = subparser_convert.add_parser("srt2ass", help="srt -> ass 视频")
-    subparser_convert_srt2ass.add_argument("--path", required=False, help="srt的文件夹路径")
-    subparser_convert_srt2ass.set_defaults(func=srt2ass)
+    # Command subtitle -> Subcommand srt2ass
+    subparser_subtitle_srt2ass = subparser_subtitle.add_parser("srt2ass", help="srt -> ass 视频")
+    subparser_subtitle_srt2ass.add_argument("--path", required=False, help="srt的文件夹路径")
+    subparser_subtitle_srt2ass.set_defaults(func=srt2ass)
 
-    # Command convert -> Subcommand mergesrt
-    subparser_convert_mergesrt = subparser_convert.add_parser("mergesrt", help="将两个不同语言的srt合并为一个srt")
-    subparser_convert_mergesrt.add_argument("--path", required=False, help="srt的文件夹路径")
-    subparser_convert_mergesrt.set_defaults(func=mergesrt)
+    # Command subtitle -> Subcommand mergesrt
+    subparser_subtitle_mergesrt = subparser_subtitle.add_parser("mergesrt", help="将两个不同语言的srt合并为一个srt")
+    subparser_subtitle_mergesrt.add_argument("--path", required=False, help="srt的文件夹路径")
+    subparser_subtitle_mergesrt.set_defaults(func=mergesrt)
     
 
-    # Command convert -> Subcommand addass
-    subparser_convert_addass = subparser_convert.add_parser("addass", help="ass字幕添加到视频")
-    subparser_convert_addass.add_argument("--path", required=False, help="ass的文件夹路径")
-    subparser_convert_addass.set_defaults(func=addass)
+    # Command subtitle -> Subcommand addass
+    subparser_subtitle_addass = subparser_subtitle.add_parser("addass", help="ass字幕添加到视频")
+    subparser_subtitle_addass.add_argument("--path", required=False, help="ass的文件夹路径")
+    subparser_subtitle_addass.set_defaults(func=addass)
 
+    # Command subtitle -> Subcommand sequencesrt
+    subparser_subtitle_sequencesrt = subparser_subtitle.add_parser("sequencesrt", help="顺序显示每一行srt字幕")
+    subparser_subtitle_sequencesrt.add_argument("--path", required=False, help="ass的文件夹路径")
+    subparser_subtitle_sequencesrt.set_defaults(func=sequencesrt)
+
+    #Command subtitle -> Subcommand srt2txtpng
+    subparser_subtitle_srt2txtpng = subparser_subtitle.add_parser("srt2txtpng", help="将pc尺寸的视频缩放为手机大小的视频")
+    subparser_subtitle_srt2txtpng.add_argument("--path", required=False, help="视频文件夹的路径")
+    subparser_subtitle_srt2txtpng.set_defaults(func=srt2txtpng)
+
+    
 
     #Command picture
     parser_picture = subparsers.add_parser("picture", help="修改视频")
@@ -62,6 +73,7 @@ def main():
     subparser_picture_add_text = subparser_picture.add_parser("add_text", help="将pc尺寸的视频缩放为手机大小的视频")
     subparser_picture_add_text.add_argument("--path", required=False, help="视频文件夹的路径")
     subparser_picture_add_text.set_defaults(func=add_text)
+
 
     # and more ...
 
