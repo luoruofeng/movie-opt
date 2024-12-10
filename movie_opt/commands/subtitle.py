@@ -409,6 +409,8 @@ def create_png_with_text(text, output_path):
     lines = wrapped_text.split("\n")
     y = margin
     for li, line in enumerate(lines):
+        if line.strip() == "":
+            continue
         x = margin
         kw_index: list[tuple[int, str]] =  find_keywords_indices(line=line,key_words=colors_ex.keys())
         for ci, char in enumerate(line):  # 按字符遍历
@@ -443,6 +445,7 @@ def create_png_with_text(text, output_path):
 
     # 保存图片
     image.save(output_path, "PNG")
+    crop_image(image_path=output_path,height=y+5)
     print(f"PNG 图片已保存: {output_path}")
 
 def wrap_text(text, draw, font, max_width):

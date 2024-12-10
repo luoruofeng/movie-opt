@@ -1,5 +1,27 @@
-def some_utility_function():
-    print("这是一个工具函数")
+from PIL import Image
+import os
+
+def crop_image(image_path, width=None, height=None):
+    # 打开图片
+    with Image.open(image_path) as img:
+        # 获取原始宽高
+        original_width, original_height = img.size
+
+        # 如果宽度为空，保持宽度不变
+        if width is None:
+            width = original_width
+
+        # 计算裁剪区域
+        left = 0
+        top = 0
+        right = width
+        bottom = height if height is not None else original_height
+
+        # 裁剪图片
+        cropped_img = img.crop((left, top, right, bottom))
+
+        # 覆盖原图片
+        cropped_img.save(image_path)
 
 
 def find_keywords_indices(line: str, key_words: list[str]) -> list[tuple[int, str]]:
