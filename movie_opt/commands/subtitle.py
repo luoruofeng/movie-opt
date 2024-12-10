@@ -5,6 +5,7 @@ import chardet  # 用于自动检测文件编码
 import re
 import json
 from PIL import Image, ImageDraw, ImageFont
+from movie_opt.utils import *
 
 
 # 全局变量，定义 ASS 文件的样式
@@ -335,7 +336,7 @@ def sequencesrt(args):
         print(f"已处理文件: {file}, 新文件保存为: modified_{file}")
 
 
-colors_ex = {"tell": "red", "about": "blue"}
+colors_ex = {"tell": "red", "about": "blue","告诉":"yellow","我的家":"blue"}
 def srt2txtpng(args):
     print(f"SRT 文件夹路径: {args.path}")
 
@@ -405,7 +406,40 @@ def create_png_with_text(text, output_path):
     draw = ImageDraw.Draw(image)
 
     # 绘制文本
-    draw.multiline_text((margin, margin), wrapped_text, fill="black", font=font, spacing=line_spacing)
+    lines = wrapped_text.split("\n")
+    y = margin
+    for li, line in enumerate(lines):
+        x = margin
+        kw_index: list[tuple[int, str]] =  find_keywords_indices(line=line,key_words=colors_ex.keys())
+        for ci, char in enumerate(line):  # 按字符遍历
+            bbox = draw.textbbox((x, y), char, font=font)
+            includ_kw = False
+            if kw_index != None and len(kw_index) > 0:
+                for si,kw in kw_index:
+                    start = si
+                    end = si + len(kw)
+                    if ci >= start and ci < end:
+                        if ci == start:
+                            # 绘制带背景的字符
+                            bg_bbox = draw.textbbox((x, y), kw, font=font)
+                            draw.rectangle(bg_bbox, fill="lightgreen")  # 背景色
+                        draw.text((x, y), char, fill=colors_ex[kw], font=font)
+                        includ_kw = True
+                if not includ_kw:
+                    # 普通字符绘制
+                    draw.text((x, y), char, fill="black", font=font)
+            else:
+                # 普通字符绘制
+                draw.text((x, y), char, fill="black", font=font)
+
+            # 更新 x 坐标
+            char_width = bbox[2] - bbox[0]
+            x += char_width
+
+        # 更新 y 坐标，用于下一行
+        text_height = font.getbbox(line)[3] - font.getbbox(line)[1]
+        y += text_height + line_spacing
+
 
     # 保存图片
     image.save(output_path, "PNG")
