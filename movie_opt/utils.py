@@ -1,3 +1,4 @@
+import json
 from PIL import Image
 import os
 
@@ -39,3 +40,59 @@ def find_keywords_indices(line: str, key_words: list[str]) -> list[tuple[int, st
             results.append((index, keyword))
             start = index + 1  # 更新开始位置，避免重复查找
     return results
+
+def assign_colors(lists, color_palette=None):
+    """
+    给多个列表赋予不同颜色，每个列表对应一个颜色。
+
+    Args:
+        lists: 一个二维列表，其中每个子列表对应一个需要赋色的元素组。
+        color_palette: 可选，一个包含颜色名称的列表，用于自定义颜色。
+
+    Returns:
+        一个字典，键为元素，值为对应的颜色。
+    """
+    # 示例用法
+    # lists = [["a","b"],["egg","dog"],["right","good"]]
+    # result = assign_colors(lists)
+    # print(result)
+
+    if not color_palette:
+        # 默认颜色列表，包含20种颜色
+        color_palette = [
+            'red', 'orange', 'yellow', 'green', 'blue', 'purple',
+            'pink', 'brown', 'gray', 'cyan',
+            'magenta', 'olive', 'maroon', 'navy', 'teal',
+            'lime', 'aqua', 'fuchsia', 'silver', 'gold'
+        ]
+
+    color_dict = {}
+    color_index = 0
+    for sublist in lists:
+        for item in sublist:
+            color_dict[item] = color_palette[color_index]
+        color_index = (color_index + 1) % len(color_palette)
+
+    return color_dict
+
+
+
+def is_list_of_strings(obj):
+    return isinstance(obj, list) and all(isinstance(item, str) for item in obj)
+
+
+def string_to_list(string_list):
+    """将字符串形式的列表转换为真正的列表
+
+    Args:
+        string_list: 字符串形式的列表
+
+    Returns:
+        转换后的列表
+    """
+
+    try:
+        return json.loads(string_list)
+    except json.JSONDecodeError:
+        print("Invalid JSON format")
+        return None

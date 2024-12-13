@@ -7,7 +7,7 @@ learn english by movie
 https://www.alibabafonts.com/#/font
 ```
 
-
+如果要使用阿里千万api请配置环境变量DASHSCOPE_API_KEY
 
 
 # 使用
@@ -42,3 +42,8 @@ movie_opt.exe subtitle sequencesrt --path="C:\Users\luoruofeng\Desktop\test"
 movie_opt.exe subtitle srt2txtpng --path="C:\Users\luoruofeng\Desktop\test"
 ```
 
+
+##
+```
+movie_opt.exe ai get_hard_words_and_set_color --path="C:\Users\luoruofeng\Desktop\test2\test.srt"
+```

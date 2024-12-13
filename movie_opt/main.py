@@ -2,6 +2,7 @@ import argparse
 from movie_opt.commands.create import create_pc, create_phone
 from movie_opt.commands.subtitle import srt2ass, addass, mergesrt, sequencesrt, srt2txtpng
 from movie_opt.commands.picture import cut_pc2phone, scale_pc2phone, add_text
+from movie_opt.commands.ai import get_hard_words_and_set_color
 
 def main():
     parser = argparse.ArgumentParser(
@@ -74,6 +75,16 @@ def main():
     subparser_picture_add_text.add_argument("--path", required=False, help="视频文件夹的路径")
     subparser_picture_add_text.set_defaults(func=add_text)
 
+    #Command ai
+    parser_ai = subparsers.add_parser("ai", help="ai提问")
+    subparser_ai = parser_ai.add_subparsers(dest="subcommand", help="ai命令的子命令")
+    
+    # Command ai -> Subcommand get_hard_words_and_set_color
+    subparser_ai_get_hard_words_and_set_color = subparser_ai.add_parser("get_hard_words_and_set_color", help="将找出txt或srt文件中某种难度的单词，默认难度4级。")
+    subparser_ai_get_hard_words_and_set_color.add_argument("--path", required=True, help="txt或srt文件的路径，不能是文件夹")
+    subparser_ai_get_hard_words_and_set_color.add_argument("--level", required=False, help="单词的级别，如：雅思，6级。也可以是多个级别难度：4级和6级")
+    subparser_ai_get_hard_words_and_set_color.set_defaults(func=get_hard_words_and_set_color)
+    
 
     # and more ...
 
